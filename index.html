@@ -26,15 +26,39 @@
       font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
     }
 
+    /* Standard block layout on body prevents flexbox auto-centering bugs in html2canvas */
     body {
+      margin: 0;
+      padding: 0;
       background-color: var(--bg-page);
       color: var(--text-color);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      display: block;
       min-height: 100vh;
       padding-bottom: 60px;
       overflow-x: hidden;
+    }
+
+    /* CRITICAL FIX for html2pdf left-offset cropping bug:
+       Forces html2pdf internal containers to pin at left:0 with zero margins */
+    .html2pdf__overlay {
+      left: 0 !important;
+      top: 0 !important;
+      right: auto !important;
+      width: 100% !important;
+      position: fixed !important;
+    }
+
+    .html2pdf__container {
+      left: 0 !important;
+      right: auto !important;
+      top: 0 !important;
+      margin: 0 !important;
+      position: absolute !important;
+      width: 210mm !important;
+      max-width: 210mm !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+      text-align: left !important;
     }
 
     /* Top Control Toolbar */
@@ -98,18 +122,15 @@
       background: #475569;
     }
 
-    /* Interactive Working Container */
+    /* Interactive Working Container: Standard block flow to prevent layout shifts */
     .page-container {
       width: 210mm;
-      min-height: 297mm;
       background: #ffffff;
       margin: 25px auto;
-      padding: 14mm 18mm 14mm 18mm;
+      padding: 25px 35px 35px 35px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
       position: relative;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      display: block;
       box-sizing: border-box;
       transition: width 0.2s, padding 0.2s;
     }
@@ -117,6 +138,7 @@
     /* Header Section */
     .invoice-header {
       width: 100%;
+      display: block;
     }
 
     .banner-container {
@@ -155,7 +177,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       font-size: 14px;
     }
 
@@ -217,7 +239,7 @@
     /* Subject / Title */
     .invoice-subject-container {
       text-align: center;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
 
     .invoice-subject {
@@ -442,10 +464,8 @@
 
     /* Signatory Section */
     .signatory-section {
-      margin-top: 35px;
+      margin-top: 30px;
       margin-bottom: 25px;
-      page-break-inside: avoid;
-      break-inside: avoid;
     }
 
     .signatory-company {
@@ -469,9 +489,7 @@
     /* Footer Section */
     .invoice-footer {
       width: 100%;
-      margin-top: auto;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      margin-top: 30px;
     }
 
     .footer-divider {
@@ -574,9 +592,7 @@
         width: calc(100% - 16px);
         max-width: calc(100% - 16px);
         margin: 10px auto;
-        padding: 14px 10px 16px 10px;
-        min-height: auto;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        padding: 14px 10px 20px 10px;
       }
 
       .ref-date-row {
@@ -637,7 +653,7 @@
       }
 
       .invoice-footer {
-        margin-top: 20px;
+        margin-top: 25px;
       }
 
       .footer-content {
@@ -666,12 +682,25 @@
         display: none !important;
       }
 
+      #multiPagePrintContainer {
+        display: block !important;
+      }
+
       .page-container {
         display: none !important;
       }
 
-      #multiPagePrintContainer {
-        display: block !important;
+      .a4-export-page {
+        width: 210mm !important;
+        height: 297mm !important;
+        min-height: 297mm !important;
+        max-height: 297mm !important;
+        padding: 10mm 15mm 20mm 15mm !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        position: relative !important;
+        page-break-after: always !important;
+        break-after: page !important;
       }
 
       @page {
@@ -898,7 +927,7 @@
     let invoiceState = JSON.parse(JSON.stringify(SAMPLE_DATA));
 
     window.addEventListener("DOMContentLoaded", () => {
-      const saved = localStorage.getItem("saeed_invoice_data_v6");
+      const saved = localStorage.getItem("saeed_invoice_data_v9");
       if (saved) {
         try {
           invoiceState = JSON.parse(saved);
@@ -1126,7 +1155,7 @@
 
     function saveToStorage() {
       syncStateFromDOM();
-      localStorage.setItem("saeed_invoice_data_v6", JSON.stringify(invoiceState));
+      localStorage.setItem("saeed_invoice_data_v9", JSON.stringify(invoiceState));
     }
 
     document.addEventListener("input", (e) => {
@@ -1157,43 +1186,11 @@
     }
 
     // =========================================================
-    // Multi-Page Generator Engine with Fixed Header & Footer
+    // Multi-Page Sheet Builder with Zero-Offset Alignment
     // =========================================================
     function buildMultiPageSheets() {
       syncStateFromDOM();
       const subjectName = getInvoiceSubjectFilename();
-
-      // Measure row heights dynamically in offscreen container
-      const scratch = document.createElement("div");
-      scratch.style.position = "fixed";
-      scratch.style.left = "-9999px";
-      scratch.style.top = "0";
-      scratch.style.width = "794px";
-      scratch.style.padding = "25px 45px";
-      scratch.style.boxSizing = "border-box";
-      document.body.appendChild(scratch);
-
-      const mTable = document.createElement("table");
-      mTable.className = "items-table";
-      mTable.style.width = "100%";
-      const mBody = document.createElement("tbody");
-      mTable.appendChild(mBody);
-      scratch.appendChild(mTable);
-
-      const rowHeights = [];
-      invoiceState.items.forEach((item, idx) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="col-sr">${idx + 1}</td>
-          <td class="col-desc"><div class="desc-cell">${escapeHtml(item.desc || "")}</div></td>
-          <td class="col-amount">${formatNumber(item.amount)}</td>
-          <td class="col-rate">${item.rate}%</td>
-          <td class="col-tax">${formatNumber(Math.round(parseRawNumber(item.amount) * parseRawNumber(item.rate) / 100))}</td>
-          <td class="col-total">${formatNumber(parseRawNumber(item.amount) + Math.round(parseRawNumber(item.amount) * parseRawNumber(item.rate) / 100))}</td>
-        </tr>`;
-        mBody.appendChild(tr);
-        rowHeights.push(Math.max(tr.offsetHeight || 38, 38));
-      });
 
       let totalWork = 0;
       let totalTax = 0;
@@ -1209,90 +1206,77 @@
         if (idx === 0 && rt > 0) primaryRate = rt;
       });
 
-      scratch.remove();
-
-      // Vertical space budgeting (Exact A4 @ 96DPI = 1122px height)
-      const USABLE_H = 1122 - 50; // 1072px inside 25px top/bottom padding
-      const PAGE1_HEADER_H = 430;  // Full header banner + ref/date + subject + client + meta
-      const SUBPAGE_HEADER_H = 170; // Header banner + continuation line
-      const FOOTER_H = 60;         // Fixed footer
-      const TH_H = 38;             // Table header
-      const ENDINGS_H = 115;       // Total row + signatures
-
-      const PAGE1_ITEMS_BUDGET = USABLE_H - PAGE1_HEADER_H - FOOTER_H - TH_H; // ~544px
-      const SUBPAGE_ITEMS_BUDGET = USABLE_H - SUBPAGE_HEADER_H - FOOTER_H - TH_H; // ~804px
+      // Page 1 capacity: 10 rows; Subsequent pages: 16 rows
+      const PAGE1_CAPACITY = 10;
+      const SUBPAGE_CAPACITY = 16;
 
       const pages = [];
-      let currentItems = [];
-      let currentHeight = 0;
-      let isFirstPage = true;
+      const allItems = invoiceState.items.map((it, idx) => ({ item: it, globalIndex: idx }));
 
-      for (let i = 0; i < invoiceState.items.length; i++) {
-        const rHeight = rowHeights[i];
-        const isLastItem = (i === invoiceState.items.length - 1);
-        const extraForEndings = isLastItem ? ENDINGS_H : 0;
-        const maxBudget = isFirstPage ? (PAGE1_ITEMS_BUDGET - extraForEndings) : (SUBPAGE_ITEMS_BUDGET - extraForEndings);
+      if (allItems.length <= PAGE1_CAPACITY) {
+        pages.push({
+          isFirstPage: true,
+          items: allItems,
+          isLastPage: true
+        });
+      } else {
+        pages.push({
+          isFirstPage: true,
+          items: allItems.slice(0, PAGE1_CAPACITY),
+          isLastPage: false
+        });
 
-        if (currentItems.length > 0 && (currentHeight + rHeight > maxBudget)) {
-          // Push current page and start next page
+        let remaining = allItems.slice(PAGE1_CAPACITY);
+        while (remaining.length > 0) {
+          const sliceSize = Math.min(remaining.length, SUBPAGE_CAPACITY);
+          const isFinal = (remaining.length <= SUBPAGE_CAPACITY);
           pages.push({
-            isFirstPage: isFirstPage,
-            items: currentItems,
-            isLastPage: false
+            isFirstPage: false,
+            items: remaining.slice(0, sliceSize),
+            isLastPage: isFinal
           });
-          currentItems = [{ item: invoiceState.items[i], globalIndex: i }];
-          currentHeight = rHeight;
-          isFirstPage = false;
-        } else {
-          currentItems.push({ item: invoiceState.items[i], globalIndex: i });
-          currentHeight += rHeight;
+          remaining = remaining.slice(sliceSize);
         }
       }
 
-      // Final page
-      pages.push({
-        isFirstPage: isFirstPage,
-        items: currentItems,
-        isLastPage: true
-      });
-
-      // Construct Multi-Page DOM sheets
+      // Root export container
       const container = document.createElement("div");
-      container.id = "multiPageExportWrapper";
-      container.style.width = "794px";
-      container.style.background = "#fff";
+      container.id = "multiPageExportContainer";
+      container.style.width = "210mm";
+      container.style.maxWidth = "210mm";
+      container.style.background = "#ffffff";
+      container.style.display = "block";
+      container.style.margin = "0";
+      container.style.padding = "0";
 
       pages.forEach((pInfo, pIdx) => {
         const sheet = document.createElement("div");
-        sheet.className = "pdf-page-sheet";
-        sheet.style.width = "794px";
-        sheet.style.height = "1122px";
-        sheet.style.maxHeight = "1122px";
-        sheet.style.padding = "25px 45px 25px 45px";
-        sheet.style.boxSizing = "border-box";
+        sheet.className = "a4-export-page";
+        sheet.style.width = "210mm";
+        sheet.style.height = "297mm";
+        sheet.style.minHeight = "297mm";
+        sheet.style.maxHeight = "297mm";
         sheet.style.background = "#ffffff";
-        sheet.style.display = "flex";
-        sheet.style.flexDirection = "column";
-        sheet.style.justifyContent = "space-between";
-        sheet.style.overflow = "hidden";
+        sheet.style.boxSizing = "border-box";
         sheet.style.position = "relative";
+        sheet.style.padding = "10mm 15mm 25mm 15mm";
+        sheet.style.margin = "0";
+        sheet.style.display = "block";
         if (pIdx < pages.length - 1) {
           sheet.style.pageBreakAfter = "always";
           sheet.style.breakAfter = "page";
         }
 
-        // Header block: Fixed across every page
-        const headerDiv = document.createElement("div");
-        headerDiv.className = "page-fixed-header";
-
+        // Header on every page
+        const headerBlock = document.createElement("div");
         if (pInfo.isFirstPage) {
-          headerDiv.innerHTML = `
-            <div class="banner-container" style="margin-bottom: 12px;">
-              <img src="header_banner.png" alt="Header" class="header-banner-img" style="width:100%; height:auto; display:block;">
+          headerBlock.innerHTML = `
+            <div style="width:100%; margin-bottom:12px;">
+              <img src="header_banner.png" alt="Header" style="width:100%; height:auto; display:block;">
             </div>
-            <div class="ref-date-row" style="display:flex; justify-content:space-between; margin-bottom:14px; font-size:14px;">
-              <div><span style="font-weight:800;">Ref:</span> <span class="underline-input" style="display:inline-block; min-width:150px; font-weight:700;">${escapeHtml(invoiceState.refNumber || "")}</span></div>
-              <div><span style="font-weight:800;">Date:</span> <span class="underline-input" style="display:inline-block; min-width:150px; font-weight:700;">${escapeHtml(invoiceState.refDate || "")}</span></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:14px; font-size:14px;">
+              <div><span style="font-weight:800;">Ref:</span> <span style="display:inline-block; min-width:140px; border-bottom:1.5px solid #000; font-weight:700;">${escapeHtml(invoiceState.refNumber || "")}</span></div>
+              <div><span style="font-weight:800;">Date:</span> <span style="display:inline-block; min-width:140px; border-bottom:1.5px solid #000; font-weight:700;">${escapeHtml(invoiceState.refDate || "")}</span></div>
             </div>
             <div style="text-align:center; margin-bottom:14px;">
               <div style="font-size:13.5px; font-weight:800; text-transform:uppercase; text-decoration:underline;">${escapeHtml(invoiceState.invoiceSubject || "")}</div>
@@ -1303,7 +1287,7 @@
               <div>${escapeHtml(invoiceState.clientNTN || "")}</div>
               <div style="font-weight:900; margin-top:3px;">${escapeHtml(invoiceState.taxInvoiceHeading || "")}</div>
             </div>
-            <div class="meta-box" style="border:2px solid #000; padding:5px 12px; font-size:13px; font-weight:800; margin-bottom:12px;">
+            <div style="border:2px solid #000; padding:5px 12px; font-size:13px; font-weight:800; margin-bottom:14px;">
               <div style="display:flex; justify-content:space-between; padding:2px 0;">
                 <div><span>Invoice #</span> <span style="font-weight:800;">${escapeHtml(invoiceState.invoiceNo || "")}</span></div>
                 <div><span>Work order No. :</span> <span style="font-weight:800;">${escapeHtml(invoiceState.workOrderNo || "")}</span></div>
@@ -1319,25 +1303,19 @@
             </div>
           `;
         } else {
-          // Fixed Header on subsequent pages
-          headerDiv.innerHTML = `
-            <div class="banner-container" style="margin-bottom: 10px;">
-              <img src="header_banner.png" alt="Header" class="header-banner-img" style="width:100%; height:auto; display:block;">
+          headerBlock.innerHTML = `
+            <div style="width:100%; margin-bottom:10px;">
+              <img src="header_banner.png" alt="Header" style="width:100%; height:auto; display:block;">
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #000; padding-bottom:4px; margin-bottom:12px; font-size:13px; font-weight:800;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid #000; padding-bottom:4px; margin-bottom:14px; font-size:13px; font-weight:800;">
               <div>Invoice #${escapeHtml(invoiceState.invoiceNo || "")} (Continued) &middot; Ref: ${escapeHtml(invoiceState.refNumber || "")}</div>
               <div>Date: ${escapeHtml(invoiceState.refDate || "")} &middot; Page ${pIdx + 1} of ${pages.length}</div>
             </div>
           `;
         }
 
-        // Table Content for this page
-        const contentDiv = document.createElement("div");
-        contentDiv.style.flex = "1";
-        contentDiv.style.display = "flex";
-        contentDiv.style.flexDirection = "column";
-
-        let trRows = "";
+        // Table Block
+        let rowsHtml = "";
         pInfo.items.forEach(itObj => {
           const it = itObj.item;
           const sr = itObj.globalIndex + 1;
@@ -1345,21 +1323,21 @@
           const rt = parseRawNumber(it.rate);
           const tx = Math.round(amt * (rt / 100));
           const rowTot = amt + tx;
-          trRows += `
+          rowsHtml += `
             <tr>
-              <td class="col-sr" style="text-align:center; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${sr}</td>
-              <td class="col-desc" style="text-align:left; border:1.5px solid #000; padding:6px 8px; font-size:12.5px; font-weight:600;"><div style="white-space:pre-wrap; word-break:break-word;">${escapeHtml(it.desc || "")}</div></td>
-              <td class="col-amount" style="text-align:right; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${formatNumber(amt)}</td>
-              <td class="col-rate" style="text-align:center; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${rt}%</td>
-              <td class="col-tax" style="text-align:right; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${formatNumber(tx)}</td>
-              <td class="col-total" style="text-align:right; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${formatNumber(rowTot)}</td>
+              <td style="width:7%; text-align:center; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${sr}</td>
+              <td style="width:39%; text-align:left; border:1.5px solid #000; padding:6px 8px; font-size:12.5px; font-weight:600;"><div style="white-space:pre-wrap; word-break:break-word;">${escapeHtml(it.desc || "")}</div></td>
+              <td style="width:14%; text-align:right; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${formatNumber(amt)}</td>
+              <td style="width:10%; text-align:center; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${rt}%</td>
+              <td style="width:14%; text-align:right; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${formatNumber(tx)}</td>
+              <td style="width:16%; text-align:right; font-weight:bold; border:1.5px solid #000; padding:6px 8px; font-size:13px;">${formatNumber(rowTot)}</td>
             </tr>
           `;
         });
 
-        let totalRowHtml = "";
+        let totalHtml = "";
         if (pInfo.isLastPage) {
-          totalRowHtml = `
+          totalHtml = `
             <tfoot>
               <tr style="border-top:2px solid #000; font-weight:900;">
                 <td colspan="2" style="text-align:center; font-weight:900; border:1.5px solid #000; padding:6px 8px; font-size:13.5px;">TOTAL AMOUNT</td>
@@ -1372,8 +1350,9 @@
           `;
         }
 
-        contentDiv.innerHTML = `
-          <table class="items-table" style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:14px;">
+        const tableBlock = document.createElement("div");
+        tableBlock.innerHTML = `
+          <table style="width:100%; border-collapse:collapse; border:2px solid #000; margin-bottom:14px;">
             <thead>
               <tr>
                 <th style="width:7%; text-align:center; border:1.5px solid #000; padding:6px 8px; font-size:13px; font-weight:900; background:#fff; color:#000;">SR.NO</th>
@@ -1385,62 +1364,64 @@
               </tr>
             </thead>
             <tbody>
-              ${trRows}
+              ${rowsHtml}
             </tbody>
-            ${totalRowHtml}
+            ${totalHtml}
           </table>
         `;
 
+        // Signatures (on final page)
+        const signBlock = document.createElement("div");
         if (pInfo.isLastPage) {
-          const signDiv = document.createElement("div");
-          signDiv.style.marginTop = "18px";
-          signDiv.style.marginBottom = "14px";
-          signDiv.innerHTML = `
-            <div style="font-size:14.5px; font-weight:900; text-transform:uppercase; margin-bottom:3px;">${escapeHtml(invoiceState.signatoryCompany || "")}</div>
-            <div style="font-size:13.5px; font-weight:700;">${escapeHtml(invoiceState.signatoryPerson || "")}</div>
+          signBlock.innerHTML = `
+            <div style="margin-top:16px; margin-bottom:14px;">
+              <div style="font-size:14.5px; font-weight:900; text-transform:uppercase; margin-bottom:3px;">${escapeHtml(invoiceState.signatoryCompany || "")}</div>
+              <div style="font-size:13.5px; font-weight:700;">${escapeHtml(invoiceState.signatoryPerson || "")}</div>
+            </div>
           `;
-          contentDiv.appendChild(signDiv);
         }
 
-        // Footer block: Fixed across every page
-        const footerDiv = document.createElement("div");
-        footerDiv.className = "invoice-footer";
-        footerDiv.style.marginTop = "auto";
-        footerDiv.style.width = "100%";
-        footerDiv.innerHTML = `
-          <div style="border-top:3.5px solid #000; border-bottom:1.2px solid #000; height:4px; margin-bottom:8px; width:100%;"></div>
-          <div style="text-align:center; font-size:13px; color:#000; line-height:1.45; font-weight:500;">
+        // Fixed Footer at exact bottom of EVERY page
+        const footerBlock = document.createElement("div");
+        footerBlock.style.position = "absolute";
+        footerBlock.style.bottom = "8mm";
+        footerBlock.style.left = "15mm";
+        footerBlock.style.right = "15mm";
+        footerBlock.style.height = "16mm";
+        footerBlock.innerHTML = `
+          <div style="border-top:3.5px solid #000; border-bottom:1.2px solid #000; height:4px; margin-bottom:6px; width:100%;"></div>
+          <div style="text-align:center; font-size:12.5px; color:#000; line-height:1.4; font-weight:500;">
             <div>${escapeHtml(invoiceState.footerLine1 || "")}</div>
             <div>${escapeHtml(invoiceState.footerLine2 || "")}</div>
           </div>
         `;
 
-        sheet.appendChild(headerDiv);
-        sheet.appendChild(contentDiv);
-        sheet.appendChild(footerDiv);
+        sheet.appendChild(headerBlock);
+        sheet.appendChild(tableBlock);
+        sheet.appendChild(signBlock);
+        sheet.appendChild(footerBlock);
 
         container.appendChild(sheet);
+
+        // Page-break marker between sheets for html2pdf pagebreak plugin
+        if (pIdx < pages.length - 1) {
+          var pbDiv = document.createElement("div");
+          pbDiv.className = "html2pdf__page-break";
+          pbDiv.style.height = "0";
+          pbDiv.style.pageBreakAfter = "always";
+          pbDiv.style.breakAfter = "page";
+          container.appendChild(pbDiv);
+        }
       });
 
       return { container: container, filename: subjectName + ".pdf", totalPages: pages.length };
     }
 
-    // Direct multi-page download with fixed header and footer
+    // Direct PDF Download with Zero Margin Mapping
     function downloadPdf() {
-      showToast("Generating multi-page download...");
+      showToast("Generating PDF download...");
 
       const { container, filename, totalPages } = buildMultiPageSheets();
-
-      // Put offscreen
-      const offscreen = document.createElement("div");
-      offscreen.style.position = "fixed";
-      offscreen.style.left = "-9999px";
-      offscreen.style.top = "0";
-      offscreen.style.width = "794px";
-      offscreen.style.zIndex = "-1000";
-      offscreen.style.overflow = "hidden";
-      offscreen.appendChild(container);
-      document.body.appendChild(offscreen);
 
       const opt = {
         margin: 0,
@@ -1450,36 +1431,46 @@
           scale: 2, 
           useCORS: true, 
           logging: false,
-          width: 794,
-          windowWidth: 794
+          scrollX: 0,
+          scrollY: 0,
+          x: 0,
+          y: 0
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ['css', 'legacy'] }
       };
 
       if (typeof html2pdf !== "undefined") {
-        html2pdf().set(opt).from(container).save().then(() => {
-          offscreen.remove();
-          showToast(`Downloaded ${totalPages} page(s): ${filename}`);
-        }).catch((err) => {
-          offscreen.remove();
-          console.error("PDF generation failed, using native print", err);
+        html2pdf().set(opt).from(container).toPdf().then(function() {
+          // Remove extra blank trailing page from sub-pixel height rounding
+          var pdf = this.prop.pdf;
+          if (pdf && pdf.internal) {
+            var actual = pdf.internal.getNumberOfPages();
+            while (actual > totalPages) {
+              pdf.deletePage(actual);
+              actual = pdf.internal.getNumberOfPages();
+            }
+          }
+        }).save().then(function() {
+          showToast("Downloaded " + totalPages + " page(s): " + filename);
+        }).catch(function(err) {
+          console.error("PDF generation failed, falling back to print", err);
           nativePrint();
         });
       } else {
-        offscreen.remove();
         nativePrint();
       }
     }
 
     function nativePrint() {
-      const { container, filename } = buildMultiPageSheets();
-      const printHolder = document.getElementById("multiPagePrintContainer");
-      printHolder.innerHTML = "";
-      printHolder.appendChild(container);
-
+      syncStateFromDOM();
       const previousTitle = document.title;
       document.title = getInvoiceSubjectFilename();
+
+      const printHolder = document.getElementById("multiPagePrintContainer");
+      printHolder.innerHTML = "";
+      const { container } = buildMultiPageSheets();
+      printHolder.appendChild(container);
 
       window.print();
 
@@ -1488,6 +1479,20 @@
         document.title = previousTitle;
       }, 1000);
     }
+
+    // Auto-prepare pages if Ctrl+P is pressed directly
+    window.addEventListener("beforeprint", () => {
+      const printHolder = document.getElementById("multiPagePrintContainer");
+      if (printHolder.children.length === 0) {
+        const { container } = buildMultiPageSheets();
+        printHolder.appendChild(container);
+      }
+    });
+
+    window.addEventListener("afterprint", () => {
+      const printHolder = document.getElementById("multiPagePrintContainer");
+      printHolder.innerHTML = "";
+    });
 
     function exportData() {
       syncStateFromDOM();
