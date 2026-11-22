@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invoice Generator - Saeed Ahmed & Brothers</title>
+  <!-- Local html2pdf bundle for offline PDF generation -->
+  <script src="html2pdf.bundle.min.js"></script>
+  <script>
+    if (typeof html2pdf === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>');
+    }
+  </script>
+  <style>
+    :root {
+      --primary-color: #df6721;
+      --border-color: #000000;
+      --bg-page: #f1f5f9;
+      --text-color: #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* Top Control Toolbar (Screen only) */
+    .control-panel {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .control-panel .app-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      color: #f8fafc;
+    }
+
+    .control-panel .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 8px 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: #df6721;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #c85513;
+    }
+
+    .btn-secondary {
+      background: #334155;
+      color: #f1f5f9;
+      border: 1px solid #475569;
+    }
+    .btn-secondary:hover {
+      background: #475569;
+    }
+
+    /* A4 Paper Container */
+    .page-container {
+      width: 210mm;
+      min-height: 297mm;
+      background: #ffffff;
+      margin: 25px auto;
+      padding: 14mm 18mm 14mm 18mm;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: width 0.2s, padding 0.2s;
+    }
+
+    /* Header Section */
+    .invoice-header {
+      width: 100%;
+    }
+
+    .banner-container {
+      width: 100%;
+      position: relative;
+      cursor: pointer;
+      margin-bottom: 22px;
+    }
+
+    .header-banner-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: contain;
+    }
+
+    .banner-change-hint {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      color: #fff;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .banner-container:hover .banner-change-hint {
+      opacity: 1;
+    }
+
+    /* Ref & Date Row */
+    .ref-date-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 26px;
+      font-size: 14px;
+    }
+
+    .ref-box, .date-box {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      position: relative;
+    }
+
+    .bold-label {
+      font-weight: 800;
+      color: #000;
+      font-size: 14.5px;
+    }
+
+    .underline-input {
+      border: none;
+      border-bottom: 1.5px solid #000;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 0 4px;
+      outline: none;
+      background: transparent;
+      min-width: 150px;
+      color: #000;
+    }
+
+    .btn-picker {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 6px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-picker:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+      color: #0f172a;
+    }
+
+    .hidden-date-picker {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      width: 0;
+      height: 0;
+      bottom: 0;
+      left: 0;
+    }
+
+    /* Subject / Title */
+    .invoice-subject-container {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .invoice-subject {
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      text-decoration: underline;
+      display: inline-block;
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 2px 4px;
+      line-height: 1.35;
+      color: #000;
+    }
+
+    /* Client Details Section */
+    .client-section {
+      margin-bottom: 16px;
+      font-size: 13.5px;
+      line-height: 1.45;
+    }
+
+    .client-field {
+      font-weight: 800;
+      text-transform: uppercase;
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 1px 2px;
+      color: #000;
+    }
+
+    .tax-invoice-heading {
+      font-size: 14px;
+      font-weight: 900;
+      margin-top: 5px;
+      text-transform: uppercase;
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 1px 2px;
+      color: #000;
+    }
+
+    /* Invoice Metadata Box (2-column, 3-row layout) */
+    .meta-box {
+      border: 2px solid #000;
+      margin-bottom: 18px;
+      padding: 6px 14px;
+      font-size: 13.5px;
+      font-weight: 800;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .meta-col {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      flex: 1;
+      position: relative;
+    }
+
+    .meta-col:first-child {
+      flex: 1.1;
+    }
+
+    .meta-col:last-child {
+      flex: 0.9;
+    }
+
+    .meta-label {
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .meta-val {
+      font-weight: 800;
+      border: 1px dashed transparent;
+      padding: 0 4px;
+      outline: none;
+      min-width: 60px;
+    }
+
+    /* Items Table */
+    .items-table-wrapper {
+      position: relative;
+      margin-bottom: 30px;
+    }
+
+    .mobile-table-hint {
+      display: none;
+      font-size: 11.5px;
+      color: #64748b;
+      margin-bottom: 6px;
+      text-align: right;
+      font-style: italic;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 2px solid #000;
+    }
+
+    .items-table th, 
+    .items-table td {
+      border: 1.5px solid #000;
+      padding: 6px 8px;
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    .items-table th {
+      font-weight: 900;
+      text-transform: uppercase;
+      text-align: center;
+      background: #fff;
+      color: #000;
+    }
+
+    .tax-header {
+      color: #000;
+      text-decoration: none;
+      font-weight: 900;
+    }
+
+    .col-sr { width: 7%; text-align: center; }
+    .col-desc { width: 39%; }
+    .col-amount { width: 14%; text-align: right; }
+    .col-rate { width: 10%; text-align: center; }
+    .col-tax { width: 14%; text-align: right; }
+    .col-total { width: 16%; text-align: right; }
+    .col-action { width: 28px; text-align: center; border: none !important; }
+
+    .items-table td.col-sr {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .items-table td.col-desc {
+      text-align: left;
+    }
+
+    .desc-cell {
+      outline: none;
+      min-height: 38px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12.5px;
+      line-height: 1.35;
+      font-weight: 600;
+    }
+
+    .items-table td.col-amount,
+    .items-table td.col-tax,
+    .items-table td.col-total {
+      text-align: right;
+      font-weight: bold;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .items-table td.col-rate {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .editable-num {
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 1px 3px;
+      display: inline-block;
+      min-width: 50px;
+    }
+
+    /* Total Row */
+    .items-table tr.total-row {
+      border-top: 2px solid #000;
+    }
+
+    .items-table tr.total-row td {
+      font-weight: 900;
+      font-size: 13.5px;
+      padding: 6px 8px;
+    }
+
+    .items-table tr.total-row td.total-label {
+      text-align: center;
+      font-weight: 900;
+    }
+
+    /* Table action buttons (screen only) */
+    .row-delete-btn {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1;
+      transition: all 0.2s;
+    }
+    .row-delete-btn:hover {
+      background: #ef4444;
+      color: white;
+      border-color: #dc2626;
+    }
+
+    .add-row-container {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    /* Signatory Section */
+    .signatory-section {
+      margin-top: 70px;
+      margin-bottom: 45px;
+    }
+
+    .signatory-company {
+      font-size: 14.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 1px 4px;
+    }
+
+    .signatory-person {
+      font-size: 13.5px;
+      font-weight: 700;
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 1px 4px;
+    }
+
+    /* Footer Section */
+    .invoice-footer {
+      width: 100%;
+      margin-top: auto;
+    }
+
+    .footer-divider {
+      border-top: 3.5px solid #000;
+      border-bottom: 1.2px solid #000;
+      height: 4px;
+      margin-bottom: 8px;
+    }
+
+    .footer-content {
+      text-align: center;
+      font-size: 13.5px;
+      color: #000;
+      line-height: 1.45;
+      font-weight: 500;
+    }
+
+    .footer-field {
+      outline: none;
+      border: 1px dashed transparent;
+      padding: 1px 4px;
+    }
+
+    /* Screen mode interactive cues */
+    [contenteditable="true"]:hover {
+      background-color: #f8fafc;
+      border-color: #cbd5e1 !important;
+      border-radius: 2px;
+    }
+
+    [contenteditable="true"]:focus {
+      background-color: #fefce8;
+      outline: 2px solid #facc15;
+      border-color: transparent !important;
+      border-radius: 2px;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0f172a;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 2000;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* =========================================================
+       Mobile Responsive Styles (Screen widths <= 768px)
+       ========================================================= */
+    @media screen and (max-width: 768px) {
+      body {
+        padding-bottom: 40px;
+      }
+
+      .control-panel {
+        padding: 10px 14px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      .control-panel .app-title {
+        font-size: 14.5px;
+        text-align: center;
+      }
+
+      .control-panel .btn-group {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        width: 100%;
+      }
+
+      .btn {
+        justify-content: center;
+        padding: 9px 8px;
+        font-size: 12px;
+      }
+
+      .btn-primary {
+        grid-column: span 2;
+      }
+
+      .page-container {
+        width: calc(100% - 16px);
+        max-width: calc(100% - 16px);
+        margin: 10px auto;
+        padding: 14px 10px;
+        min-height: auto;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      }
+
+      .ref-date-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+
+      .ref-box, .date-box {
+        width: 100%;
+      }
+
+      .underline-input {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
+      }
+
+      .invoice-subject {
+        font-size: 12.5px;
+      }
+
+      .client-section {
+        font-size: 12.5px;
+      }
+
+      .meta-box {
+        font-size: 12px;
+        padding: 6px 8px;
+      }
+
+      .meta-row {
+        flex-direction: column;
+        gap: 4px;
+        padding: 3px 0;
+      }
+
+      .items-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 20px;
+      }
+
+      .mobile-table-hint {
+        display: block;
+      }
+
+      .items-table {
+        min-width: 600px;
+      }
+
+      .signatory-section {
+        margin-top: 35px;
+        margin-bottom: 25px;
+      }
+
+      .footer-content {
+        font-size: 11px;
+      }
+    }
+
+    /* =========================================================
+       Direct PDF Export Mode (Enforces pristine A4 canvas)
+       ========================================================= */
+    body.is-exporting-pdf .page-container {
+      width: 210mm !important;
+      min-height: 297mm !important;
+      padding: 14mm 18mm 14mm 18mm !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+    }
+
+    body.is-exporting-pdf .control-panel,
+    body.is-exporting-pdf .add-row-container,
+    body.is-exporting-pdf .col-action,
+    body.is-exporting-pdf .row-delete-btn,
+    body.is-exporting-pdf .banner-change-hint,
+    body.is-exporting-pdf .btn-picker,
+    body.is-exporting-pdf .hidden-date-picker,
+    body.is-exporting-pdf .mobile-table-hint,
+    body.is-exporting-pdf .toast {
+      display: none !important;
+    }
+
+    body.is-exporting-pdf .items-table-wrapper {
+      overflow: visible !important;
+    }
+
+    body.is-exporting-pdf .items-table {
+      min-width: 100% !important;
+      width: 100% !important;
+    }
+
+    body.is-exporting-pdf [contenteditable="true"] {
+      border-color: transparent !important;
+      background: transparent !important;
+    }
+
+    body.is-exporting-pdf .underline-input {
+      border-bottom: 1.5px solid #000 !important;
+    }
+
+    /* =========================================================
+       Native Print Specific Styles
+       ========================================================= */
+    @media print {
+      body {
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .control-panel,
+      .add-row-container,
+      .col-action,
+      .row-delete-btn,
+      .banner-change-hint,
+      .btn-picker,
+      .hidden-date-picker,
+      .mobile-table-hint,
+      .toast {
+        display: none !important;
+      }
+
+      .page-container {
+        margin: 0 !important;
+        padding: 10mm 15mm 10mm 15mm !important;
+        width: 100% !important;
+        min-height: 297mm !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+
+      .items-table-wrapper {
+        overflow: visible !important;
+      }
+
+      .items-table {
+        min-width: 100% !important;
+        width: 100% !important;
+      }
+
+      [contenteditable="true"] {
+        border-color: transparent !important;
+        background: transparent !important;
+      }
+
+      .underline-input {
+        border-bottom: 1.5px solid #000 !important;
+      }
+
+      .items-table, .meta-box, .footer-divider {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Toolbar (Hidden when printing or exporting) -->
+  <div class="control-panel">
+    <div class="app-title">
+      Invoice Generator - Saeed Ahmed &amp; Brothers
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="downloadPdf()">
+        Print to PDF
+      </button>
+      <button class="btn btn-secondary" onclick="addRow()">
+        + Add Row
+      </button>
+      <button class="btn btn-secondary" onclick="exportData()">
+        Save Draft (JSON)
+      </button>
+      <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">
+        Load Draft
+      </button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-secondary" onclick="resetToSample()">
+        Reset Sample
+      </button>
+      <button class="btn btn-secondary" onclick="nativePrint()">
+        System Print
+      </button>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Custom Banner/Logo Replacement -->
+  <input type="file" id="bannerFileInput" accept="image/*" style="display:none" onchange="handleBannerUpload(event)">
+
+  <!-- A4 Invoice Page Container -->
+  <div class="page-container" id="invoice">
+
+    <!-- Header Section -->
+    <div class="invoice-header">
+      <!-- Full Official Header Banner Matching Provided Screenshot -->
+      <div class="banner-container" title="Click to replace header image" onclick="document.getElementById('bannerFileInput').click()">
+        <img src="header_banner.png" alt="Saeed Ahmed & Brothers Header" class="header-banner-img" id="headerBannerImg" onerror="handleBannerFallback(this)">
+        <span class="banner-change-hint">Click to replace banner image</span>
+      </div>
+
+      <!-- Ref & Date Row -->
+      <div class="ref-date-row">
+        <div class="ref-box">
+          <span class="bold-label">Ref:</span>
+          <input type="text" class="underline-input" id="refNumber" value="" placeholder="_________________">
+        </div>
+        <div class="date-box">
+          <span class="bold-label">Date:</span>
+          <input type="text" class="underline-input" id="refDate" value="" placeholder="DD - MM - YYYY" ondblclick="openDatePicker('refDatePicker', 'refDate')">
+          <button type="button" class="btn-picker" onclick="openDatePicker('refDatePicker', 'refDate')">Select Date</button>
+          <input type="date" id="refDatePicker" class="hidden-date-picker" onchange="handleDatePicked('refDate', this.value)">
+        </div>
+      </div>
+
+      <!-- Subject / Title -->
+      <div class="invoice-subject-container">
+        <div class="invoice-subject" contenteditable="true" id="invoiceSubject">
+          INVOICE AGAINST CIVIL WORK AT CORRIDORE BETWEEN CEPH AND GENRAL PHARMA
+        </div>
+      </div>
+
+      <!-- Client Information -->
+      <div class="client-section">
+        <div class="client-field" contenteditable="true" id="clientName">PLATINUM PHARMACEUTICAL (PVT) LTD.</div>
+        <div class="client-field" contenteditable="true" id="clientAddress">A-20 NORTH WESTERN INDUSTRIAL ZONE BIN QASIM,KARACHI</div>
+        <div class="client-field" contenteditable="true" id="clientNTN">NTN # </div>
+        <div class="tax-invoice-heading" contenteditable="true" id="taxInvoiceHeading">SINDH SALES TAX INVOICE</div>
+      </div>
+
+      <!-- Invoice Metadata Box (2-column, 3-row layout) -->
+      <div class="meta-box">
+        <!-- Row 1 -->
+        <div class="meta-row">
+          <div class="meta-col">
+            <span class="meta-label">Invoice #</span>
+            <span class="meta-val" contenteditable="true" id="invoiceNo">033</span>
+          </div>
+          <div class="meta-col">
+            <span class="meta-label">Work order No. :</span>
+            <span class="meta-val" contenteditable="true" id="workOrderNo">4200008855</span>
+          </div>
+        </div>
+
+        <!-- Row 2 -->
+        <div class="meta-row">
+          <div class="meta-col">
+            <span class="meta-label">SST Reg. No:</span>
+            <span class="meta-val" contenteditable="true" id="sstRegNo">2272408-7</span>
+          </div>
+          <div class="meta-col">
+            <!-- Blank right column in row 2 to match exact layout -->
+          </div>
+        </div>
+
+        <!-- Row 3 -->
+        <div class="meta-row">
+          <div class="meta-col">
+            <span class="meta-label">NTN No.:&nbsp;&nbsp;</span>
+            <span class="meta-val" contenteditable="true" id="ntnNo">2272408-7</span>
+          </div>
+          <div class="meta-col">
+            <span class="meta-label">Issue Date :</span>
+            <span class="meta-val" contenteditable="true" id="issueDate">16- 11 -2026</span>
+            <button type="button" class="btn-picker" onclick="openDatePicker('issueDatePicker', 'issueDate')">Select Date</button>
+            <input type="date" id="issueDatePicker" class="hidden-date-picker" onchange="handleDatePicked('issueDate', this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Items Table Section -->
+    <div class="items-table-wrapper">
+      <div class="mobile-table-hint">Scroll table horizontally to view all columns</div>
+      <table class="items-table" id="itemsTable">
+        <thead>
+          <tr>
+            <th class="col-sr">SR.NO</th>
+            <th class="col-desc">WORK DISCRIPTION</th>
+            <th class="col-amount">WORK AMOUNT</th>
+            <th class="col-rate">SST RATE</th>
+            <th class="col-tax"><span class="tax-header" id="taxHeaderTitle">SRB@15%</span></th>
+            <th class="col-total">TOTAL AMOUNT</th>
+            <th class="col-action"></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Populated dynamically via JS -->
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="2" class="total-label">TOTAL AMOUNT</td>
+            <td class="col-amount" id="grandWorkAmount">328,000</td>
+            <td class="col-rate"></td>
+            <td class="col-tax" id="grandTaxAmount">49,200</td>
+            <td class="col-total" id="grandTotalAmount">377,200</td>
+            <td class="col-action"></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Add item button (screen only) -->
+      <div class="add-row-container">
+        <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="addRow()">
+          + Add Work Item
+        </button>
+      </div>
+    </div>
+
+    <!-- Signatory Section -->
+    <div class="signatory-section">
+      <div class="signatory-company" contenteditable="true" id="signatoryCompany">SAEED AHMAD&BROTHERS</div>
+      <div class="signatory-person" contenteditable="true" id="signatoryPerson">Muhammad Bilal haider</div>
+    </div>
+
+    <!-- Footer Address Section -->
+    <div class="invoice-footer">
+      <div class="footer-divider"></div>
+      <div class="footer-content">
+        <div class="footer-field" contenteditable="true" id="footerLine1">
+          R-129, Allama Usmania Society Phase 2, Sector 11-A, KDA Scheme 33,
+        </div>
+        <div class="footer-field" contenteditable="true" id="footerLine2">
+          Near Ayoub Goth, Karachi. Cell: 0300-2486007, 0301-2502006
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast message notification -->
+  <div class="toast" id="toast">Notification</div>
+
+  <script>
+    function getTodayFormatted() {
+      const d = new Date();
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day} - ${month} - ${year}`;
+    }
+
+    const SAMPLE_DATA = {
+      refNumber: "",
+      refDate: getTodayFormatted(),
+      invoiceSubject: "INVOICE AGAINST CIVIL WORK AT CORRIDORE BETWEEN CEPH AND GENRAL PHARMA",
+      clientName: "PLATINUM PHARMACEUTICAL (PVT) LTD.",
+      clientAddress: "A-20 NORTH WESTERN INDUSTRIAL ZONE BIN QASIM,KARACHI",
+      clientNTN: "NTN # ",
+      taxInvoiceHeading: "SINDH SALES TAX INVOICE",
+      invoiceNo: "033",
+      workOrderNo: "4200008855",
+      sstRegNo: "2272408-7",
+      ntnNo: "2272408-7",
+      issueDate: getTodayFormatted(),
+      signatoryCompany: "SAEED AHMAD&BROTHERS",
+      signatoryPerson: "Muhammad Bilal haider",
+      footerLine1: "R-129, Allama Usmania Society Phase 2, Sector 11-A, KDA Scheme 33,",
+      footerLine2: "Near Ayoub Goth, Karachi. Cell: 0300-2486007, 0301-2502006",
+      items: [
+        {
+          desc: "Civil work at corridore between ceph and genral pharma sepration",
+          amount: 328000,
+          rate: 15
+        }
+      ]
+    };
+
+    let invoiceState = JSON.parse(JSON.stringify(SAMPLE_DATA));
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem("saeed_invoice_data_v4");
+      if (saved) {
+        try {
+          invoiceState = JSON.parse(saved);
+        } catch (e) {
+          console.error("Could not load local invoice data", e);
+        }
+      }
+      
+      if (!invoiceState.refDate || invoiceState.refDate.trim() === "") {
+        invoiceState.refDate = getTodayFormatted();
+      }
+      if (!invoiceState.issueDate || invoiceState.issueDate.trim() === "") {
+        invoiceState.issueDate = getTodayFormatted();
+      }
+
+      renderAll();
+    });
+
+    function formatNumber(num) {
+      if (isNaN(num) || num === null || num === undefined) return "0";
+      return Math.round(num).toLocaleString("en-US");
+    }
+
+    function parseRawNumber(str) {
+      if (typeof str === "number") return str;
+      if (!str) return 0;
+      const clean = str.toString().replace(/,/g, "").replace(/%/g, "").trim();
+      const val = parseFloat(clean);
+      return isNaN(val) ? 0 : val;
+    }
+
+    function renderAll() {
+      document.getElementById("refNumber").value = invoiceState.refNumber || "";
+      document.getElementById("refDate").value = invoiceState.refDate || getTodayFormatted();
+      document.getElementById("invoiceSubject").innerText = invoiceState.invoiceSubject || "";
+      document.getElementById("clientName").innerText = invoiceState.clientName || "";
+      document.getElementById("clientAddress").innerText = invoiceState.clientAddress || "";
+      document.getElementById("clientNTN").innerText = invoiceState.clientNTN || "";
+      document.getElementById("taxInvoiceHeading").innerText = invoiceState.taxInvoiceHeading || "";
+      document.getElementById("invoiceNo").innerText = invoiceState.invoiceNo || "";
+      document.getElementById("workOrderNo").innerText = invoiceState.workOrderNo || "";
+      document.getElementById("sstRegNo").innerText = invoiceState.sstRegNo || "";
+      document.getElementById("issueDate").innerText = invoiceState.issueDate || getTodayFormatted();
+      document.getElementById("ntnNo").innerText = invoiceState.ntnNo || "";
+      document.getElementById("signatoryCompany").innerText = invoiceState.signatoryCompany || "";
+      document.getElementById("signatoryPerson").innerText = invoiceState.signatoryPerson || "";
+      document.getElementById("footerLine1").innerText = invoiceState.footerLine1 || "";
+      document.getElementById("footerLine2").innerText = invoiceState.footerLine2 || "";
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = "";
+
+      let totalWork = 0;
+      let totalTax = 0;
+      let totalAmount = 0;
+      let primaryRate = 15;
+
+      invoiceState.items.forEach((item, index) => {
+        const srNo = index + 1;
+        const amount = parseRawNumber(item.amount);
+        const rate = parseRawNumber(item.rate);
+        const tax = Math.round(amount * (rate / 100));
+        const rowTotal = amount + tax;
+
+        if (index === 0 && rate > 0) {
+          primaryRate = rate;
+        }
+
+        totalWork += amount;
+        totalTax += tax;
+        totalAmount += rowTotal;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="col-sr">${srNo}</td>
+          <td class="col-desc">
+            <div class="desc-cell" contenteditable="true" onblur="updateItemDesc(${index}, this.innerText)">${escapeHtml(item.desc || "")}</div>
+          </td>
+          <td class="col-amount">
+            <span class="editable-num" contenteditable="true" 
+              onfocus="this.innerText = invoiceState.items[${index}].amount" 
+              onblur="updateItemAmount(${index}, this.innerText)" 
+              onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">
+              ${formatNumber(amount)}
+            </span>
+          </td>
+          <td class="col-rate">
+            <span class="editable-num" contenteditable="true" 
+              onfocus="this.innerText = invoiceState.items[${index}].rate" 
+              onblur="updateItemRate(${index}, this.innerText)" 
+              onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}">
+              ${rate}%
+            </span>
+          </td>
+          <td class="col-tax">${formatNumber(tax)}</td>
+          <td class="col-total">${formatNumber(rowTotal)}</td>
+          <td class="col-action">
+            <button class="row-delete-btn" title="Delete Row" onclick="deleteRow(${index})">&times;</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("taxHeaderTitle").innerText = `SRB@${primaryRate}%`;
+
+      document.getElementById("grandWorkAmount").innerText = formatNumber(totalWork);
+      document.getElementById("grandTaxAmount").innerText = formatNumber(totalTax);
+      document.getElementById("grandTotalAmount").innerText = formatNumber(totalAmount);
+
+      saveToStorage();
+    }
+
+    function addRow() {
+      const defaultRate = invoiceState.items.length > 0 ? invoiceState.items[0].rate : 15;
+      invoiceState.items.push({
+        desc: "",
+        amount: 0,
+        rate: defaultRate
+      });
+      renderTable();
+      showToast("Line item added");
+    }
+
+    function deleteRow(index) {
+      if (invoiceState.items.length <= 1) {
+        showToast("At least one line item is required");
+        return;
+      }
+      invoiceState.items.splice(index, 1);
+      renderTable();
+      showToast("Line item deleted");
+    }
+
+    function updateItemDesc(index, val) {
+      invoiceState.items[index].desc = val.trim();
+      saveToStorage();
+    }
+
+    function updateItemAmount(index, val) {
+      invoiceState.items[index].amount = parseRawNumber(val);
+      renderTable();
+    }
+
+    function updateItemRate(index, val) {
+      invoiceState.items[index].rate = parseRawNumber(val);
+      renderTable();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    function openDatePicker(pickerId, targetId) {
+      const picker = document.getElementById(pickerId);
+      const target = document.getElementById(targetId);
+      if (!picker) return;
+
+      if (target) {
+        const val = (target.tagName === 'INPUT' ? target.value : target.innerText).trim();
+        const m = val.match(/^(\d{1,2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{4})$/);
+        if (m) {
+          const d = m[1].padStart(2, '0');
+          const mo = m[2].padStart(2, '0');
+          const y = m[3];
+          picker.value = `${y}-${mo}-${d}`;
+        } else {
+          const today = new Date();
+          const y = today.getFullYear();
+          const mo = String(today.getMonth() + 1).padStart(2, '0');
+          const d = String(today.getDate()).padStart(2, '0');
+          picker.value = `${y}-${mo}-${d}`;
+        }
+      }
+
+      if (typeof picker.showPicker === 'function') {
+        try {
+          picker.showPicker();
+          return;
+        } catch(e) {}
+      }
+      picker.focus();
+      picker.click();
+    }
+
+    function handleDatePicked(targetId, isoDate) {
+      if (!isoDate) return;
+      const parts = isoDate.split('-');
+      if (parts.length === 3) {
+        const formatted = `${parts[2]} - ${parts[1]} - ${parts[0]}`;
+        const target = document.getElementById(targetId);
+        if (target.tagName === 'INPUT') {
+          target.value = formatted;
+        } else {
+          target.innerText = formatted;
+        }
+        saveToStorage();
+        showToast("Date updated");
+      }
+    }
+
+    function syncStateFromDOM() {
+      invoiceState.refNumber = document.getElementById("refNumber").value;
+      invoiceState.refDate = document.getElementById("refDate").value;
+      invoiceState.invoiceSubject = document.getElementById("invoiceSubject").innerText.trim();
+      invoiceState.clientName = document.getElementById("clientName").innerText.trim();
+      invoiceState.clientAddress = document.getElementById("clientAddress").innerText.trim();
+      invoiceState.clientNTN = document.getElementById("clientNTN").innerText.trim();
+      invoiceState.taxInvoiceHeading = document.getElementById("taxInvoiceHeading").innerText.trim();
+      invoiceState.invoiceNo = document.getElementById("invoiceNo").innerText.trim();
+      invoiceState.workOrderNo = document.getElementById("workOrderNo").innerText.trim();
+      invoiceState.sstRegNo = document.getElementById("sstRegNo").innerText.trim();
+      invoiceState.issueDate = document.getElementById("issueDate").innerText.trim();
+      invoiceState.ntnNo = document.getElementById("ntnNo").innerText.trim();
+      invoiceState.signatoryCompany = document.getElementById("signatoryCompany").innerText.trim();
+      invoiceState.signatoryPerson = document.getElementById("signatoryPerson").innerText.trim();
+      invoiceState.footerLine1 = document.getElementById("footerLine1").innerText.trim();
+      invoiceState.footerLine2 = document.getElementById("footerLine2").innerText.trim();
+    }
+
+    function saveToStorage() {
+      syncStateFromDOM();
+      localStorage.setItem("saeed_invoice_data_v4", JSON.stringify(invoiceState));
+    }
+
+    document.addEventListener("input", (e) => {
+      if (e.target.isContentEditable || e.target.classList.contains("underline-input")) {
+        saveToStorage();
+      }
+    });
+
+    function resetToSample() {
+      if (confirm("Reset all invoice details to the original template?")) {
+        invoiceState = JSON.parse(JSON.stringify(SAMPLE_DATA));
+        invoiceState.refDate = getTodayFormatted();
+        invoiceState.issueDate = getTodayFormatted();
+        renderAll();
+        showToast("Reset to sample template");
+      }
+    }
+
+    function getInvoiceSubjectFilename() {
+      syncStateFromDOM();
+      let subject = (invoiceState.invoiceSubject || "").trim();
+      // Remove characters not allowed in file names
+      subject = subject.replace(/[/\\?%*:|"<>]/g, '').trim();
+      subject = subject.replace(/\s+/g, ' ');
+      if (!subject) {
+        subject = "Invoice_" + (invoiceState.invoiceNo || "033");
+      }
+      return subject;
+    }
+
+    // Direct PDF generation and download named as invoicesubject.pdf
+    function downloadPdf() {
+      syncStateFromDOM();
+      const subjectName = getInvoiceSubjectFilename();
+      const filename = subjectName + ".pdf";
+
+      showToast("Generating PDF download...");
+
+      // Temporarily switch to standard A4 desktop rendering mode for clean PDF output
+      document.body.classList.add("is-exporting-pdf");
+
+      const element = document.getElementById("invoice");
+      const opt = {
+        margin: [8, 10, 8, 10],
+        filename: filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+      };
+
+      if (typeof html2pdf !== "undefined") {
+        html2pdf().set(opt).from(element).save().then(() => {
+          document.body.classList.remove("is-exporting-pdf");
+          showToast("Downloaded: " + filename);
+        }).catch((err) => {
+          document.body.classList.remove("is-exporting-pdf");
+          console.error("PDF generation failed, falling back to print", err);
+          nativePrint();
+        });
+      } else {
+        document.body.classList.remove("is-exporting-pdf");
+        nativePrint();
+      }
+    }
+
+    function nativePrint() {
+      syncStateFromDOM();
+      const subjectName = getInvoiceSubjectFilename();
+      const previousTitle = document.title;
+      document.title = subjectName;
+      window.print();
+      setTimeout(() => {
+        document.title = previousTitle;
+      }, 1000);
+    }
+
+    function exportData() {
+      syncStateFromDOM();
+      const num = invoiceState.invoiceNo.replace(/[^a-zA-Z0-9_-]/g, "") || "draft";
+      const filename = `Invoice_${num}_${new Date().toISOString().slice(0,10)}.json`;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(invoiceState, null, 2));
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", filename);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Draft exported to JSON file");
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported && imported.items) {
+            invoiceState = imported;
+            renderAll();
+            showToast("Draft imported successfully");
+          } else {
+            alert("The uploaded file does not contain valid invoice data.");
+          }
+        } catch (err) {
+          alert("Error parsing JSON file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    }
+
+    function handleBannerUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById("headerBannerImg").src = e.target.result;
+          showToast("Header banner updated");
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function handleBannerFallback(img) {
+      img.src = "logo.png";
+      img.style.maxHeight = "90px";
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById("toast");
+      toast.innerText = msg;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
