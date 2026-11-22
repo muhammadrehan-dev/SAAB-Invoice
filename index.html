@@ -34,9 +34,10 @@
       align-items: center;
       min-height: 100vh;
       padding-bottom: 60px;
+      overflow-x: hidden;
     }
 
-    /* Top Control Toolbar (Screen only) */
+    /* Top Control Toolbar */
     .control-panel {
       position: sticky;
       top: 0;
@@ -103,12 +104,13 @@
       min-height: 297mm;
       background: #ffffff;
       margin: 25px auto;
-      padding: 14mm 18mm 14mm 18mm;
+      padding: 12mm 16mm 12mm 16mm;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
       position: relative;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      box-sizing: border-box;
       transition: width 0.2s, padding 0.2s;
     }
 
@@ -121,7 +123,7 @@
       width: 100%;
       position: relative;
       cursor: pointer;
-      margin-bottom: 22px;
+      margin-bottom: 16px;
     }
 
     .header-banner-img {
@@ -153,7 +155,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 26px;
+      margin-bottom: 18px;
       font-size: 14px;
     }
 
@@ -215,7 +217,7 @@
     /* Subject / Title */
     .invoice-subject-container {
       text-align: center;
-      margin-bottom: 24px;
+      margin-bottom: 18px;
     }
 
     .invoice-subject {
@@ -233,7 +235,7 @@
 
     /* Client Details Section */
     .client-section {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       font-size: 13.5px;
       line-height: 1.45;
     }
@@ -250,7 +252,7 @@
     .tax-invoice-heading {
       font-size: 14px;
       font-weight: 900;
-      margin-top: 5px;
+      margin-top: 4px;
       text-transform: uppercase;
       outline: none;
       border: 1px dashed transparent;
@@ -258,10 +260,10 @@
       color: #000;
     }
 
-    /* Invoice Metadata Box (2-column, 3-row layout) */
+    /* Invoice Metadata Box */
     .meta-box {
       border: 2px solid #000;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       padding: 6px 14px;
       font-size: 13.5px;
       font-weight: 800;
@@ -305,7 +307,7 @@
     /* Items Table */
     .items-table-wrapper {
       position: relative;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     }
 
     .mobile-table-hint {
@@ -409,7 +411,7 @@
       font-weight: 900;
     }
 
-    /* Table action buttons (screen only) */
+    /* Table action buttons */
     .row-delete-btn {
       background: #f1f5f9;
       color: #64748b;
@@ -440,8 +442,10 @@
 
     /* Signatory Section */
     .signatory-section {
-      margin-top: 70px;
-      margin-bottom: 45px;
+      margin-top: 35px;
+      margin-bottom: 25px;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .signatory-company {
@@ -466,6 +470,8 @@
     .invoice-footer {
       width: 100%;
       margin-top: auto;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
     .footer-divider {
@@ -473,14 +479,16 @@
       border-bottom: 1.2px solid #000;
       height: 4px;
       margin-bottom: 8px;
+      width: 100%;
     }
 
     .footer-content {
       text-align: center;
-      font-size: 13.5px;
+      font-size: 13px;
       color: #000;
       line-height: 1.45;
       font-weight: 500;
+      word-break: break-word;
     }
 
     .footer-field {
@@ -530,7 +538,7 @@
        ========================================================= */
     @media screen and (max-width: 768px) {
       body {
-        padding-bottom: 40px;
+        padding-bottom: 30px;
       }
 
       .control-panel {
@@ -566,7 +574,7 @@
         width: calc(100% - 16px);
         max-width: calc(100% - 16px);
         margin: 10px auto;
-        padding: 14px 10px;
+        padding: 14px 10px 16px 10px;
         min-height: auto;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
       }
@@ -575,7 +583,7 @@
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
       }
 
       .ref-box, .date-box {
@@ -589,16 +597,18 @@
       }
 
       .invoice-subject {
-        font-size: 12.5px;
+        font-size: 12px;
       }
 
       .client-section {
-        font-size: 12.5px;
+        font-size: 12px;
+        margin-bottom: 12px;
       }
 
       .meta-box {
-        font-size: 12px;
+        font-size: 11.5px;
         padding: 6px 8px;
+        margin-bottom: 12px;
       }
 
       .meta-row {
@@ -610,7 +620,7 @@
       .items-table-wrapper {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
       }
 
       .mobile-table-hint {
@@ -622,12 +632,17 @@
       }
 
       .signatory-section {
-        margin-top: 35px;
-        margin-bottom: 25px;
+        margin-top: 25px;
+        margin-bottom: 20px;
+      }
+
+      .invoice-footer {
+        margin-top: 20px;
       }
 
       .footer-content {
-        font-size: 11px;
+        font-size: 10.5px;
+        line-height: 1.4;
       }
     }
 
@@ -722,7 +737,7 @@
     </div>
   </div>
 
-  <!-- Hidden File Input for Custom Banner/Logo Replacement -->
+  <!-- Hidden File Input for Custom Banner Replacement -->
   <input type="file" id="bannerFileInput" accept="image/*" style="display:none" onchange="handleBannerUpload(event)">
 
   <!-- A4 Invoice Page Container -->
@@ -730,7 +745,7 @@
 
     <!-- Header Section -->
     <div class="invoice-header">
-      <!-- Full Official Header Banner Matching Provided Screenshot -->
+      <!-- Full Official Header Banner -->
       <div class="banner-container" title="Click to replace header image" onclick="document.getElementById('bannerFileInput').click()">
         <img src="header_banner.png" alt="Saeed Ahmed & Brothers Header" class="header-banner-img" id="headerBannerImg" onerror="handleBannerFallback(this)">
         <span class="banner-change-hint">Click to replace banner image</span>
@@ -765,7 +780,7 @@
         <div class="tax-invoice-heading" contenteditable="true" id="taxInvoiceHeading">SINDH SALES TAX INVOICE</div>
       </div>
 
-      <!-- Invoice Metadata Box (2-column, 3-row layout) -->
+      <!-- Invoice Metadata Box -->
       <div class="meta-box">
         <!-- Row 1 -->
         <div class="meta-row">
@@ -786,7 +801,7 @@
             <span class="meta-val" contenteditable="true" id="sstRegNo">2272408-7</span>
           </div>
           <div class="meta-col">
-            <!-- Blank right column in row 2 to match exact layout -->
+            <!-- Blank right column in row 2 -->
           </div>
         </div>
 
@@ -836,7 +851,7 @@
         </tfoot>
       </table>
 
-      <!-- Add item button (screen only) -->
+      <!-- Add item button -->
       <div class="add-row-container">
         <button class="btn btn-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="addRow()">
           + Add Work Item
@@ -1156,7 +1171,6 @@
     function getInvoiceSubjectFilename() {
       syncStateFromDOM();
       let subject = (invoiceState.invoiceSubject || "").trim();
-      // Remove characters not allowed in file names
       subject = subject.replace(/[/\\?%*:|"<>]/g, '').trim();
       subject = subject.replace(/\s+/g, ' ');
       if (!subject) {
@@ -1165,7 +1179,7 @@
       return subject;
     }
 
-    // Direct PDF download using off-screen clone so screen alignment never shifts
+    // Direct PDF download perfectly fitted to single A4 page
     function downloadPdf() {
       syncStateFromDOM();
       const subjectName = getInvoiceSubjectFilename();
@@ -1174,10 +1188,9 @@
       showToast("Generating download...");
 
       const origElement = document.getElementById("invoice");
-      // Clone element off-screen so visible screen layout and alignment never shift
       const clone = origElement.cloneNode(true);
 
-      // Transfer input values to clone as text elements
+      // Transfer input values to plain text in clone
       const origRef = document.getElementById("refNumber");
       const origDate = document.getElementById("refDate");
       const cloneRef = clone.querySelector("#refNumber");
@@ -1205,41 +1218,74 @@
       const toRemove = clone.querySelectorAll(".btn-picker, .hidden-date-picker, .row-delete-btn, .add-row-container, .mobile-table-hint, .banner-change-hint, .col-action");
       toRemove.forEach(el => el.remove());
 
-      // Format clone with standard A4 dimensions
+      // Exact single-page A4 canvas: 794px by 1122px (210mm x 297mm at 96 DPI)
       clone.style.width = "794px";
-      clone.style.minHeight = "1120px";
-      clone.style.padding = "35px 45px 30px 45px";
+      clone.style.height = "1122px";
+      clone.style.maxHeight = "1122px";
+      clone.style.padding = "25px 45px 25px 45px";
       clone.style.margin = "0";
       clone.style.boxShadow = "none";
       clone.style.background = "#ffffff";
       clone.style.boxSizing = "border-box";
+      clone.style.display = "flex";
+      clone.style.flexDirection = "column";
+      clone.style.justifyContent = "space-between";
+      clone.style.overflow = "hidden";
 
-      const tableWrapper = clone.querySelector(".items-table-wrapper");
-      if (tableWrapper) {
-        tableWrapper.style.overflow = "visible";
-        tableWrapper.style.width = "100%";
-        tableWrapper.style.margin = "0 0 25px 0";
+      // Compact spacing in clone so footer never spills onto page 2
+      const cloneBanner = clone.querySelector(".banner-container");
+      if (cloneBanner) cloneBanner.style.marginBottom = "14px";
+
+      const cloneRefDate = clone.querySelector(".ref-date-row");
+      if (cloneRefDate) cloneRefDate.style.marginBottom = "14px";
+
+      const cloneSubject = clone.querySelector(".invoice-subject-container");
+      if (cloneSubject) cloneSubject.style.marginBottom = "14px";
+
+      const cloneClient = clone.querySelector(".client-section");
+      if (cloneClient) cloneClient.style.marginBottom = "12px";
+
+      const cloneMeta = clone.querySelector(".meta-box");
+      if (cloneMeta) cloneMeta.style.marginBottom = "14px";
+
+      const cloneTableWrapper = clone.querySelector(".items-table-wrapper");
+      if (cloneTableWrapper) {
+        cloneTableWrapper.style.overflow = "visible";
+        cloneTableWrapper.style.width = "100%";
+        cloneTableWrapper.style.margin = "0 0 16px 0";
       }
 
-      const table = clone.querySelector(".items-table");
-      if (table) {
-        table.style.width = "100%";
-        table.style.minWidth = "100%";
+      const cloneTable = clone.querySelector(".items-table");
+      if (cloneTable) {
+        cloneTable.style.width = "100%";
+        cloneTable.style.minWidth = "100%";
       }
 
-      // Append to an invisible off-screen container
+      const cloneSign = clone.querySelector(".signatory-section");
+      if (cloneSign) {
+        cloneSign.style.marginTop = "25px";
+        cloneSign.style.marginBottom = "20px";
+      }
+
+      const cloneFooter = clone.querySelector(".invoice-footer");
+      if (cloneFooter) {
+        cloneFooter.style.marginTop = "auto";
+      }
+
+      // Invisible offscreen container
       const offscreen = document.createElement("div");
       offscreen.style.position = "fixed";
       offscreen.style.left = "-9999px";
       offscreen.style.top = "0";
       offscreen.style.width = "794px";
+      offscreen.style.height = "1122px";
       offscreen.style.zIndex = "-1000";
       offscreen.style.overflow = "hidden";
       offscreen.appendChild(clone);
       document.body.appendChild(offscreen);
 
       const opt = {
-        margin: [6, 0, 6, 0],
+        margin: 0,
         filename: filename,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { 
@@ -1247,7 +1293,9 @@
           useCORS: true, 
           logging: false,
           width: 794,
-          windowWidth: 794
+          height: 1122,
+          windowWidth: 794,
+          windowHeight: 1122
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
       };
@@ -1258,7 +1306,7 @@
           showToast("Downloaded: " + filename);
         }).catch((err) => {
           offscreen.remove();
-          console.error("PDF generation failed", err);
+          console.error("html2pdf failed", err);
           nativePrint();
         });
       } else {
