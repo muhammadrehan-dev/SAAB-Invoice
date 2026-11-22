@@ -125,12 +125,14 @@
     /* Interactive Working Container: Standard block flow to prevent layout shifts */
     .page-container {
       width: 210mm;
+      min-height: 297mm;
       background: #ffffff;
       margin: 25px auto;
       padding: 25px 35px 35px 35px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
       position: relative;
-      display: block;
+      display: flex;
+      flex-direction: column;
       box-sizing: border-box;
       transition: width 0.2s, padding 0.2s;
     }
@@ -462,9 +464,10 @@
       justify-content: flex-start;
     }
 
-    /* Signatory Section */
+    /* Signatory Section positioned near footer */
     .signatory-section {
-      margin-top: 30px;
+      margin-top: auto;
+      padding-top: 30px;
       margin-bottom: 25px;
     }
 
@@ -591,6 +594,7 @@
       .page-container {
         width: calc(100% - 16px);
         max-width: calc(100% - 16px);
+        min-height: auto;
         margin: 10px auto;
         padding: 14px 10px 20px 10px;
       }
@@ -649,6 +653,7 @@
 
       .signatory-section {
         margin-top: 25px;
+        padding-top: 0;
         margin-bottom: 20px;
       }
 
@@ -779,7 +784,7 @@
       <div class="client-section">
         <div class="client-field" contenteditable="true" id="clientName">PLATINUM PHARMACEUTICAL (PVT) LTD.</div>
         <div class="client-field" contenteditable="true" id="clientAddress">A-20 NORTH WESTERN INDUSTRIAL ZONE BIN QASIM,KARACHI</div>
-        <div class="client-field" contenteditable="true" id="clientNTN">NTN # </div>
+        <div class="client-field" contenteditable="true" id="clientNTN">NTN # 0823553-8</div>
         <div class="tax-invoice-heading" contenteditable="true" id="taxInvoiceHeading">SINDH SALES TAX INVOICE</div>
       </div>
 
@@ -904,7 +909,7 @@
       invoiceSubject: "INVOICE AGAINST CIVIL WORK AT CORRIDORE BETWEEN CEPH AND GENRAL PHARMA",
       clientName: "PLATINUM PHARMACEUTICAL (PVT) LTD.",
       clientAddress: "A-20 NORTH WESTERN INDUSTRIAL ZONE BIN QASIM,KARACHI",
-      clientNTN: "NTN # ",
+      clientNTN: "NTN # 0823553-8",
       taxInvoiceHeading: "SINDH SALES TAX INVOICE",
       invoiceNo: "033",
       workOrderNo: "4200008855",
@@ -927,7 +932,7 @@
     let invoiceState = JSON.parse(JSON.stringify(SAMPLE_DATA));
 
     window.addEventListener("DOMContentLoaded", () => {
-      const saved = localStorage.getItem("saeed_invoice_data_v9");
+      const saved = localStorage.getItem("saeed_invoice_data_v10") || localStorage.getItem("saeed_invoice_data_v9");
       if (saved) {
         try {
           invoiceState = JSON.parse(saved);
@@ -941,6 +946,9 @@
       }
       if (!invoiceState.issueDate || invoiceState.issueDate.trim() === "") {
         invoiceState.issueDate = getTodayFormatted();
+      }
+      if (!invoiceState.clientNTN || invoiceState.clientNTN.trim() === "" || invoiceState.clientNTN.trim() === "NTN #") {
+        invoiceState.clientNTN = "NTN # 0823553-8";
       }
 
       renderAll();
@@ -1155,7 +1163,7 @@
 
     function saveToStorage() {
       syncStateFromDOM();
-      localStorage.setItem("saeed_invoice_data_v9", JSON.stringify(invoiceState));
+      localStorage.setItem("saeed_invoice_data_v10", JSON.stringify(invoiceState));
     }
 
     document.addEventListener("input", (e) => {
@@ -1370,14 +1378,16 @@
           </table>
         `;
 
-        // Signatures (on final page)
+        // Signatures (on final page, positioned near the footer)
         const signBlock = document.createElement("div");
         if (pInfo.isLastPage) {
+          signBlock.style.position = "absolute";
+          signBlock.style.bottom = "27mm";
+          signBlock.style.left = "15mm";
+          signBlock.style.right = "15mm";
           signBlock.innerHTML = `
-            <div style="margin-top:16px; margin-bottom:14px;">
-              <div style="font-size:14.5px; font-weight:900; text-transform:uppercase; margin-bottom:3px;">${escapeHtml(invoiceState.signatoryCompany || "")}</div>
-              <div style="font-size:13.5px; font-weight:700;">${escapeHtml(invoiceState.signatoryPerson || "")}</div>
-            </div>
+            <div style="font-size:14.5px; font-weight:900; text-transform:uppercase; margin-bottom:3px;">${escapeHtml(invoiceState.signatoryCompany || "")}</div>
+            <div style="font-size:13.5px; font-weight:700;">${escapeHtml(invoiceState.signatoryPerson || "")}</div>
           `;
         }
 
