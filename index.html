@@ -632,47 +632,6 @@
     }
 
     /* =========================================================
-       Direct PDF Export Mode (Enforces pristine A4 canvas)
-       ========================================================= */
-    body.is-exporting-pdf .page-container {
-      width: 210mm !important;
-      min-height: 297mm !important;
-      padding: 14mm 18mm 14mm 18mm !important;
-      margin: 0 !important;
-      box-shadow: none !important;
-    }
-
-    body.is-exporting-pdf .control-panel,
-    body.is-exporting-pdf .add-row-container,
-    body.is-exporting-pdf .col-action,
-    body.is-exporting-pdf .row-delete-btn,
-    body.is-exporting-pdf .banner-change-hint,
-    body.is-exporting-pdf .btn-picker,
-    body.is-exporting-pdf .hidden-date-picker,
-    body.is-exporting-pdf .mobile-table-hint,
-    body.is-exporting-pdf .toast {
-      display: none !important;
-    }
-
-    body.is-exporting-pdf .items-table-wrapper {
-      overflow: visible !important;
-    }
-
-    body.is-exporting-pdf .items-table {
-      min-width: 100% !important;
-      width: 100% !important;
-    }
-
-    body.is-exporting-pdf [contenteditable="true"] {
-      border-color: transparent !important;
-      background: transparent !important;
-    }
-
-    body.is-exporting-pdf .underline-input {
-      border-bottom: 1.5px solid #000 !important;
-    }
-
-    /* =========================================================
        Native Print Specific Styles
        ========================================================= */
     @media print {
@@ -735,14 +694,14 @@
 </head>
 <body>
 
-  <!-- Top Action Toolbar (Hidden when printing or exporting) -->
+  <!-- Top Action Toolbar -->
   <div class="control-panel">
     <div class="app-title">
       Invoice Generator - Saeed Ahmed &amp; Brothers
     </div>
     <div class="btn-group">
       <button class="btn btn-primary" onclick="downloadPdf()">
-        Print to PDF
+        Download PDF
       </button>
       <button class="btn btn-secondary" onclick="addRow()">
         + Add Row
@@ -758,7 +717,7 @@
         Reset Sample
       </button>
       <button class="btn btn-secondary" onclick="nativePrint()">
-        System Print
+        Print
       </button>
     </div>
   </div>
@@ -947,7 +906,7 @@
     let invoiceState = JSON.parse(JSON.stringify(SAMPLE_DATA));
 
     window.addEventListener("DOMContentLoaded", () => {
-      const saved = localStorage.getItem("saeed_invoice_data_v4");
+      const saved = localStorage.getItem("saeed_invoice_data_v5");
       if (saved) {
         try {
           invoiceState = JSON.parse(saved);
@@ -1175,7 +1134,7 @@
 
     function saveToStorage() {
       syncStateFromDOM();
-      localStorage.setItem("saeed_invoice_data_v4", JSON.stringify(invoiceState));
+      localStorage.setItem("saeed_invoice_data_v5", JSON.stringify(invoiceState));
     }
 
     document.addEventListener("input", (e) => {
@@ -1206,43 +1165,104 @@
       return subject;
     }
 
-    // Direct PDF generation and download named as invoicesubject.pdf
+    // Direct PDF download using off-screen clone so screen alignment never shifts
     function downloadPdf() {
       syncStateFromDOM();
       const subjectName = getInvoiceSubjectFilename();
       const filename = subjectName + ".pdf";
 
-      showToast("Generating PDF download...");
+      showToast("Generating download...");
 
-      // Temporarily switch to standard A4 desktop rendering mode for clean PDF output
-      document.body.classList.add("is-exporting-pdf");
+      const origElement = document.getElementById("invoice");
+      // Clone element off-screen so visible screen layout and alignment never shift
+      const clone = origElement.cloneNode(true);
 
-      const element = document.getElementById("invoice");
+      // Transfer input values to clone as text elements
+      const origRef = document.getElementById("refNumber");
+      const origDate = document.getElementById("refDate");
+      const cloneRef = clone.querySelector("#refNumber");
+      const cloneDate = clone.querySelector("#refDate");
+
+      if (cloneRef && origRef) {
+        const spanRef = document.createElement("span");
+        spanRef.className = "underline-input";
+        spanRef.style.display = "inline-block";
+        spanRef.style.minWidth = "150px";
+        spanRef.innerText = origRef.value || "";
+        cloneRef.parentNode.replaceChild(spanRef, cloneRef);
+      }
+
+      if (cloneDate && origDate) {
+        const spanDate = document.createElement("span");
+        spanDate.className = "underline-input";
+        spanDate.style.display = "inline-block";
+        spanDate.style.minWidth = "150px";
+        spanDate.innerText = origDate.value || "";
+        cloneDate.parentNode.replaceChild(spanDate, cloneDate);
+      }
+
+      // Remove screen-only action buttons from clone
+      const toRemove = clone.querySelectorAll(".btn-picker, .hidden-date-picker, .row-delete-btn, .add-row-container, .mobile-table-hint, .banner-change-hint, .col-action");
+      toRemove.forEach(el => el.remove());
+
+      // Format clone with standard A4 dimensions
+      clone.style.width = "794px";
+      clone.style.minHeight = "1120px";
+      clone.style.padding = "35px 45px 30px 45px";
+      clone.style.margin = "0";
+      clone.style.boxShadow = "none";
+      clone.style.background = "#ffffff";
+      clone.style.boxSizing = "border-box";
+
+      const tableWrapper = clone.querySelector(".items-table-wrapper");
+      if (tableWrapper) {
+        tableWrapper.style.overflow = "visible";
+        tableWrapper.style.width = "100%";
+        tableWrapper.style.margin = "0 0 25px 0";
+      }
+
+      const table = clone.querySelector(".items-table");
+      if (table) {
+        table.style.width = "100%";
+        table.style.minWidth = "100%";
+      }
+
+      // Append to an invisible off-screen container
+      const offscreen = document.createElement("div");
+      offscreen.style.position = "fixed";
+      offscreen.style.left = "-9999px";
+      offscreen.style.top = "0";
+      offscreen.style.width = "794px";
+      offscreen.style.zIndex = "-1000";
+      offscreen.style.overflow = "hidden";
+      offscreen.appendChild(clone);
+      document.body.appendChild(offscreen);
+
       const opt = {
-        margin: [8, 10, 8, 10],
+        margin: [6, 0, 6, 0],
         filename: filename,
         image: { type: "jpeg", quality: 0.98 },
         html2canvas: { 
           scale: 2, 
           useCORS: true, 
           logging: false,
-          scrollX: 0,
-          scrollY: 0
+          width: 794,
+          windowWidth: 794
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
       };
 
       if (typeof html2pdf !== "undefined") {
-        html2pdf().set(opt).from(element).save().then(() => {
-          document.body.classList.remove("is-exporting-pdf");
+        html2pdf().set(opt).from(clone).save().then(() => {
+          offscreen.remove();
           showToast("Downloaded: " + filename);
         }).catch((err) => {
-          document.body.classList.remove("is-exporting-pdf");
-          console.error("PDF generation failed, falling back to print", err);
+          offscreen.remove();
+          console.error("PDF generation failed", err);
           nativePrint();
         });
       } else {
-        document.body.classList.remove("is-exporting-pdf");
+        offscreen.remove();
         nativePrint();
       }
     }
